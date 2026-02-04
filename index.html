@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZETA 정보 아카이브</title>
+    <style>
+        :root { --main: #a855f7; --bg: #09090b; --card: #18181b; }
+        body { background: var(--bg); color: #fafafa; font-family: sans-serif; padding: 20px; margin: 0; }
+        .container { max-width: 500px; margin: auto; }
+        h1 { text-align: center; color: var(--main); font-size: 20px; margin: 20px 0; }
+        
+        /* 입력창 */
+        .admin-box { background: #27272a; padding: 15px; border-radius: 12px; margin-bottom: 25px; border: 1px dashed var(--main); }
+        .admin-box input, .admin-box select { width: 100%; padding: 10px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #3f3f46; background: #18181b; color: #fff; box-sizing: border-box; }
+        .add-btn { width: 100%; padding: 12px; background: var(--main); border: none; color: white; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
+        /* 검색창 및 탭 */
+        .search-box { width: 100%; padding: 12px; background: #18181b; border: 1px solid #3f3f46; border-radius: 10px; color: #fff; margin-bottom: 15px; box-sizing: border-box; }
+        .tabs { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 20px; padding-bottom: 10px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        .tabs::-webkit-scrollbar { display: none; }
+        .tab-btn { white-space: nowrap; background: #27272a; border: none; color: #a1a1aa; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 12px; }
+        .tab-btn.active { background: var(--main); color: #fff; }
+
+        /* 카드 디자인 */
+        .post-card { background: var(--card); padding: 16px; border-radius: 12px; border: 1px solid #27272a; text-decoration: none; color: inherit; display: block; margin-bottom: 10px; position: relative; }
+        .post-tag { font-size: 11px; color: var(--main); font-weight: bold; margin-bottom: 4px; display: block; }
+        .post-title { font-size: 15px; font-weight: bold; margin-right: 40px; }
+        .delete-btn { position: absolute; top: 16px; right: 16px; color: #ef4444; background: none; border: none; cursor: pointer; font-size: 11px; opacity: 0.5; }
+        .delete-btn:hover { opacity: 1; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🏛️ ZETA 정보 아카이브</h1>
+
+    <div class="admin-box">
+        <input type="text" id="newTitle" placeholder="글 제목 입력">
+        <input type="text" id="newLink" placeholder="링크 (https://...)">
+        <select id="newCat">
+            <option value="제타">#제타</option>
+            <option value="로어북">#로어북</option>
+            <option value="Pix">#Pix</option>
+            <option value="NAI">#NAI</option>
+            <option value="사이트">#사이트</option>
+            <option value="기타">#기타</option>
+        </select>
+        <button class="add-btn" onclick="addNewPost()">항목 추가하기</button>
+    </div>
+
+    <input type="text" id="searchInput" class="search-box" placeholder="제목 검색..." oninput="renderPosts()">
+    <div class="tabs">
+        <button class="tab-btn active" onclick="setFilter('전체')">전체</button>
+        <button class="tab-btn" onclick="setFilter('제타')">제타</button>
+        <button class="tab-btn" onclick="setFilter('로어북')">로어북</button>
+        <button class="tab-btn" onclick="setFilter('Pix')">Pix</button>
+        <button class="tab-btn" onclick="setFilter('NAI')">NAI</button>
+        <button class="tab-btn" onclick="setFilter('사이트')">사이트</button>
+        <button class="tab-btn" onclick="setFilter('기타')">기타</button>
+    </div>
+
+    <div id="postList"></div>
+</div>
+
+<script>
+    // LocalStorage에서 데이터 로드
+    let posts = JSON.parse(localStorage.getItem('zetaFinalArchive')) || [];
+    let currentFilter = "전체";
+
+    function renderPosts() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        const listDiv = document.getElementById('postList');
+        listDiv.innerHTML = "";
+
+        const filtered = posts.filter(p => {
+            const matchCat = (currentFilter === "전체") || (p.cat === currentFilter);
+            const matchSearch = p.title.toLowerCase().includes(query);
+            return matchCat && matchSearch;
+        });
+
+        filtered.forEach((p, index) => {
+            const card = document.createElement('div');
+            card.className = "post-card";
+            card.innerHTML = `
+                <a href="${p.link.startsWith('http') ? p.link : 'https://' + p.link}" target="_blank" style="text-decoration:none; color:inherit;">
+                    <span class="post-tag">#${p.cat}</span>
+                    <span class="post-title">${p.title}</span>
+                </a>
+                <button class="delete-btn" onclick="deletePost(${index})">삭제</button>
+            `;
+            listDiv.appendChild(card);
+        });
+    }
+
+    function addNewPost() {
+        const title = document.getElementById('newTitle').value;
+        const link = document.getElementById('newLink').value;
+        const cat = document.getElementById('newCat').value;
+
+        if(!title || !link) return alert("제목과 링크를 입력하세요!");
+
+        posts.unshift({ title, link, cat });
+        localStorage.setItem('zetaFinalArchive', JSON.stringify(posts));
+        
+        document.getElementById('newTitle').value = "";
+        document.getElementById('newLink').value = "";
+        renderPosts();
+    }
+
+    function deletePost(index) {
+        if(confirm("정말 삭제할까요?")) {
+            posts.splice(index, 1);
+            localStorage.setItem('zetaFinalArchive', JSON.stringify(posts));
+            renderPosts();
+        }
+    }
+
+    function setFilter(cat) {
+        currentFilter = cat;
+        const btns = document.querySelectorAll('.tab-btn');
+        btns.forEach(b => b.classList.toggle('active', b.innerText === cat));
+        renderPosts();
+    }
+
+    renderPosts();
+</script>
+
+</body>
+</html>
